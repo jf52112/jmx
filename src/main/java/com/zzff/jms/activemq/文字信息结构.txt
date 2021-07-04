@@ -1,0 +1,56 @@
+一、JMS组成结构和特点
+    JMS provider(XX MQ)
+    JMS producer
+    JMS consumer
+    JMS message(三部分组成：消息头     消息属性    消息体)
+        消息头----JMSDestination
+                  JMSDeliveryMode  消息的持久化DeliveryMode.NON_PERSISTENT为-1，默认持久化
+                  JMSExpiration    过期时间,默认永不过期
+                  JMSPriority      优先级，默认为4  0-4为基本消息 5-9为加急，JMS规定必须加急的消息比基本消息先到达
+                  JMSMessageID
+        消息体----TextMessage    String文本
+                  MapMessage    key(String)->value(java基本类型)
+                  BytesMessage  二进制数组消息，包含一个byte[]
+                  StreamMessage Java数据流消息，用标准流操作来顺序的填充和读取
+                  ObjectMessage 对象消息，包含一个可序列化的java对象
+        消息属性---增加标示，除消息头外增加属性，用于识别/去重/重点标识
+
+JMS的可靠性
+三、主题消息持久化：（发布者publish和subscriber）一定先运行一次消费者，等于向MQ注册，类似我订阅了这个主题
+               然后再运行生产者发送信息，此时无论消费者是否在先，都会接收到，不在线的话，
+               下次连接的时候，会把没有收过的消息都接收下来
+    队列消息持久化：producer.setDeliveryMode(DeliveryMode.PERSISTENT);//默认就是持久化的
+
+二、事务（事务偏生产者，签收偏消费者）
+    消息的生产者事务：在session关闭之前一定手动session.commit();，加上事务好处对于错误消息可以回滚
+    消息的消费者事务：生产者发送事务消息，消费者不开启事务也能消费。如果消费者开启了事务，那么如果没有commit的话，
+                     将可以持续读取消息内容，直到commit
+
+三、签收（事务偏生产者，签收偏消费者）
+    非事务消息的生产者签收：
+    非事务消息的消费者签收：（1、2、3、0）Session.AUTO_ACKNOWLEDG
+                           Session.CLIENT_ACKNOWLEDGE（手动签收与message.acknowledg配对，才能将消息推出队列）
+                           Session.DUPS_OK_ACKNOWLEDGE
+                           Session.SESSION_TRANSACTED
+
+    事务消息的生产者签收：true Session.AUTO_ACKNOWLEDG 以事务的形式向MQ发送消息
+    事务消息的消费者签收：当以true开启事务方式接收消息的时候，不管签收设置何值，默认签收就是Session.AUTO_ACKNOWLEDG
+                         所以在签收的时候可以（省略调message.acknowledg，但是不需要commit），
+                         （没有省略message.acknowledg，是需要commit，否则会重复消费）
+
+四、持久化订阅和非持久化订阅
+    非持久订阅状态下，不能恢复或重新派送一个未签收的消息
+    持久订阅才能恢复或重新派送一个未签收的消息
+    如果不能容忍丢失，那么就选择持久化订阅
+
+五、broker相当于ActiveMQ服务器实例，以便随时用随时启动，在用的时候再启动这样节省了资源，也保证了可靠性
+六、./activemq start xbean:file:/自己的路径到activemq的安装/conf/activemq02.xml(这样就以activemq02.xml启动MQ，而不是默认的activemq.xml)
+
+七、ActiveMQ传输协议
+    如果不特别指定ActiveMQ的网络监听端口，那么这些端口都将使用BIO网络IO模型。
+    所以为了首先提高单节点的网络吞吐性能，我们需要明确指定Active的网络IO模型
+    URI格式头以“nio”开头，标示这个端口使用以TCP协议为基础的NIO网络IO模型
+九、消息存储和持久化
+    区别于之前的JMS的可靠性持久化，之前的持久化、事务、签收都是MQ本身自带的属性，MQ宕机也就不复存在了。
+    而现在的持久化指的是物理意义上的持久化
+    ActiveMQ的消息持久化机制有JDBC\AMQ\KahaDB\LevelDB
