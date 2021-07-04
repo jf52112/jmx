@@ -6,5 +6,6 @@ public class megers {
         System.out.println("gittest commit4");
         System.out.println("master commit5");
         System.out.println("hot-fix commit5");
+        System.out.println("commit6");
     }
 }
